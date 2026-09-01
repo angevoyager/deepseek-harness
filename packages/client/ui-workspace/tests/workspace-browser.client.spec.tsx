@@ -431,6 +431,31 @@ describe('WorkspaceBrowser', () => {
     expect(screen.queryByText('gone-s')).toBeNull()
   })
 
+  it('threads a session-menu slot row into the menu and keeps the native verbs', () => {
+    const forkSession = vi.fn()
+    const archiveSession = vi.fn(async () => {})
+    mount({
+      useSessions: hook(sessionState([summary('alpha-s', 1)])),
+      useWorkspaces: hook(workspaceState([workspace('alpha', ['alpha-s'])])),
+      forkSession,
+      archiveSession,
+      renderSlot: ((name: string, owner: { sessionId: SessionId; close: () => void }) =>
+        name === 'sidebar.workspaces.sessionMenuItem'
+          ? <button type="button" role="menuitem" onClick={owner.close}>Session ID</button>
+          : null) as never,
+    })
+    fireEvent.click(screen.getByText('alpha'))
+    fireEvent.click(screen.getByRole('button', { name: '会话“alpha-s”的操作' }))
+    // The threaded renderSlot put the contributed row into the session menu.
+    expect(screen.getByRole('menuitem', { name: 'Session ID' })).toBeTruthy()
+    // Native verbs are unaffected by the extra row.
+    fireEvent.click(screen.getByRole('menuitem', { name: '分叉会话' }))
+    expect(forkSession).toHaveBeenCalledWith(sid('alpha-s'))
+    fireEvent.click(screen.getByRole('button', { name: '会话“alpha-s”的操作' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '归档会话' }))
+    expect(archiveSession).toHaveBeenCalledWith(sid('alpha-s'))
+  })
+
   it('logs and keeps the tree when the archive call rejects', async () => {
     const rejection = new Error('archive exploded')
     const archiveSession = vi.fn(async () => { throw rejection })

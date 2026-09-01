@@ -75,13 +75,19 @@ const MEASURE_STYLE: CSSProperties = { visibility: 'hidden', left: 0, top: 0 }
  * scroll/resize; return null to skip placement for that frame.
  * @param props.footer - rows pinned below the scrolling items area, separated
  * by a hairline; they stay visible while the items above scroll.
+ * @param props.children - extra rows rendered after the native items inside the
+ * same scrolling viewport. These carry their own handlers (see
+ * {@link MenuItemRow}), so a slot owner can extend a menu without routing each
+ * addition through the shared `onSelect`.
  * @returns anchor wrapper with the conditional list.
  */
-export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, onClose, align = 'start', side = 'bottom', portal = false, closeOnPointerLeave = false, dense = false, compact = false, getAnchorRect, footer, className }: {
+export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, onClose, align = 'start', side = 'bottom', portal = false, closeOnPointerLeave = false, dense = false, compact = false, getAnchorRect, footer, children, className }: {
   open: boolean
   anchor: ReactNode
   items: readonly MenuEntry[]
   footer?: readonly MenuEntry[]
+  /** Extra rows rendered after {@link items} in the scrolling viewport. */
+  children?: ReactNode
   selectedId?: string | undefined
   selectedIds?: readonly string[] | undefined
   onSelect: (id: string) => void
@@ -265,6 +271,7 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
     >
       <div className={css.viewport} role="presentation">
         {items.map(renderEntry)}
+        {children}
       </div>
       {footer !== undefined && footer.length > 0 && (
         <div className={css.footer} role="presentation">
@@ -288,5 +295,43 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
       {anchor}
       {portal ? (list !== false && createPortal(list, document.body)) : list}
     </span>
+  )
+}
+
+/** Props of a single {@link MenuItemRow}. */
+export interface MenuItemRowProps {
+  /** Row label. */
+  label: ReactNode
+  /** Leading icon (same 16px slot as native menu items). */
+  icon?: ReactNode
+  /** Destructive row: error-colored text/icon and danger hover fill. */
+  danger?: boolean
+  /** Disabled row (no click, dimmed). */
+  disabled?: boolean
+  /** Row click callback — this row owns its handler, unlike native `items`. */
+  onSelect: () => void
+}
+
+/**
+ * One native-styled menu row with its own select handler. It reuses the menu's
+ * `.item`/`.itemIcon`/`.itemLabel`/`.danger` styles so slot-contributed rows
+ * (passed as {@link Menu}'s `children`) look identical to the data-driven rows,
+ * while keeping their behavior local instead of routing through the shared
+ * `onSelect`.
+ * @param props - label, optional icon/danger/disabled, and the row's own handler.
+ * @returns the row button.
+ */
+export function MenuItemRow({ label, icon, danger = false, disabled = false, onSelect }: MenuItemRowProps) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      className={clsx(css.item, danger && css.danger)}
+      disabled={disabled}
+      onClick={onSelect}
+    >
+      {icon !== undefined && <span className={css.itemIcon}>{icon}</span>}
+      <span className={css.itemLabel}>{label}</span>
+    </button>
   )
 }

@@ -646,7 +646,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'shadows-shipped-ui',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.hero.workspace.directoryFlow\', () => ctx.slots.register(\n      { name: \'conversation.hero.workspace.directoryFlow\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:57',
+    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:77',
   },
   {
     key: 'conversation.input.attachments',
@@ -2098,7 +2098,56 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'shadows-shipped-ui',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'sidebar.workspaces.directoryFlow\', () => ctx.slots.register(\n      { name: \'sidebar.workspaces.directoryFlow\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:59',
+    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:79',
+  },
+  {
+    key: 'sidebar.workspaces.sessionMenuItem',
+    kind: 'list',
+    scope: 'root',
+    summary: 'Session-row menu item hole (declared by the WorkspaceBrowser entry): plugins append their own rows beside the native rename/fork/archive rows.',
+    doc: 'Session-row menu item hole (declared by the WorkspaceBrowser entry):\nplugins append their own rows beside the native rename/fork/archive rows.\nThe shell renders the slot\'s rows as the Menu\'s children and owns no\nSession-ID-specific copy or behavior.',
+    registerOptions: [
+      {
+        name: 'id',
+        requirement: 'required',
+        type: 'string',
+        doc: 'Your cell key. Use an id of your own: a fresh id is added beside the shipped entries, while reusing a shipped id puts you in THAT cell and replaces it. Owners that filter by id address you by it.',
+      },
+      {
+        name: 'order',
+        requirement: 'optional',
+        type: 'number',
+        doc: 'Position among the entries, ascending (default 0).',
+      },
+      {
+        name: 'label',
+        requirement: 'optional',
+        type: 'string | (() => string)',
+        doc: 'Display text where the owner projects one (nav rows, tabs). A thunk is re-read on every projection, so localized text follows the active locale without re-registering.',
+      },
+    ],
+    ownerProps: [
+      '/**\n * Owner share of the session-menu item hole: the identity to act on and the\n * hook that closes the menu. Each contributed row owns its own handler, so it\n * receives `close` to dismiss the menu exactly like the native rows do.\n */\nexport interface SessionMenuItemOwnerProps {\n  /** The session the opened menu belongs to. */\n  sessionId: SessionId\n  /** Close the session menu (the row\'s handler has already run or been scheduled). */\n  close: () => void\n  /**\n   * Show a transient toast for this row\'s feedback. The menu closes as soon as\n   * a row\'s handler runs, so the row\'s own subtree unmounts before any\n   * asynchronous feedback (e.g. a clipboard write) resolves; the row therefore\n   * reports its feedback through this owner callback, whose toast lives at the\n   * menu\'s row and survives the close.\n   */\n  notify: (text: string) => void\n}',
+    ],
+    ownerPropsReferences: [
+      'SessionId',
+    ],
+    standardProps: [
+      'useWorkspaces: SnapshotSelectorHook<WorkspaceSnapshot>',
+      'useSessions: UseSessions',
+      'useSessionPendingInteraction: UseSessionPendingInteraction',
+      'useWorkspaces: SnapshotSelectorHook<WorkspaceSnapshot>',
+    ],
+    keyDomain: '',
+    hookContext: '',
+    slotInject: '',
+    declaredBy: 'an entry in \'sidebar.workspaces\' (client-ui-workspace), so it exists while that entry is mounted',
+    occupants: [
+      'client-ui-session-id SessionIdMenuItem id \'sessionId\'',
+    ],
+    replaceRisk: 'none',
+    example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'sidebar.workspaces.sessionMenuItem\', () => ctx.slots.register(\n      { name: \'sidebar.workspaces.sessionMenuItem\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:86',
   },
   {
     key: 'tool.call.images',

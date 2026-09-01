@@ -114,7 +114,8 @@ root
 │  ├─ sidebar.brand.name
 │  ├─ sidebar.footer.action
 │  ├─ sidebar.workspaces
-│  │  └─ sidebar.workspaces.directoryFlow
+│  │  ├─ sidebar.workspaces.directoryFlow
+│  │  └─ sidebar.workspaces.sessionMenuItem
 │  └─ sidebar.settings
 │     ├─ settings.trigger
 │     ├─ settings.header

@@ -483,6 +483,58 @@ describe('workspace browser rows', () => {
     expect(screen.queryByRole('menu')).toBeNull()
   })
 
+  it('renders a slot-contributed session-menu row and keeps rename/fork/archive working', () => {
+    const onRename = vi.fn()
+    const onFork = vi.fn()
+    const onArchive = vi.fn()
+    const node: SessionNode = {
+      id: sid('s1'), title: 'One', blank: false, running: false,
+      runningSubagentCount: 0, completed: false, hasActiveSchedule: false, updatedAt: 0,
+    }
+    const renderSlot = ((name: string, owner: { sessionId: SessionId; close: () => void; notify: (text: string) => void }) =>
+      name === 'sidebar.workspaces.sessionMenuItem'
+        ? <button type="button" role="menuitem" onClick={owner.close}>Session ID</button>
+        : null) as never
+    render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
+      onRename={onRename} onFork={onFork} onArchive={onArchive} renderSlot={renderSlot} t={t} />)
+    fireEvent.click(screen.getByRole('button', { name: '会话“One”的操作' }))
+    // The contributed row renders alongside the native rows.
+    expect(screen.getByRole('menuitem', { name: 'Session ID' })).toBeTruthy()
+    // Native verbs still dispatch.
+    fireEvent.click(screen.getByRole('menuitem', { name: '重命名' }))
+    expect(onRename).toHaveBeenCalledWith(node.id, 'One')
+    fireEvent.click(screen.getByRole('button', { name: '会话“One”的操作' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '分叉会话' }))
+    expect(onFork).toHaveBeenCalledWith(node.id)
+    fireEvent.click(screen.getByRole('button', { name: '会话“One”的操作' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '归档会话' }))
+    expect(onArchive).toHaveBeenCalledWith(node.id)
+    // The contributed row's own handler closes the menu via owner.close.
+    fireEvent.click(screen.getByRole('button', { name: '会话“One”的操作' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Session ID' }))
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('keeps a slot row feedback toast visible after the menu closes', () => {
+    const node: SessionNode = {
+      id: sid('s1'), title: 'One', blank: false, running: false,
+      runningSubagentCount: 0, completed: false, hasActiveSchedule: false, updatedAt: 0,
+    }
+    // The row reports feedback through owner.notify; the row-level toast is
+    // hosted by the row (outside the menu), so it survives the close.
+    const renderSlot = ((name: string, owner: { sessionId: SessionId; close: () => void; notify: (text: string) => void }) =>
+      name === 'sidebar.workspaces.sessionMenuItem'
+        ? <button type="button" role="menuitem" onClick={() => { owner.notify('Copied'); owner.close() }}>Session ID</button>
+        : null) as never
+    render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
+      onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} renderSlot={renderSlot} t={t} />)
+    fireEvent.click(screen.getByRole('button', { name: '会话“One”的操作' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Session ID' }))
+    // The menu closed but the row-owned toast stays visible.
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(screen.getByRole('alert').textContent).toBe('Copied')
+  })
+
 
   it('shows the hover card after the dwell and suppresses it while the row menu is open', () => {
     vi.useFakeTimers()

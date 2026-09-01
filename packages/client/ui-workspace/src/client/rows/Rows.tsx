@@ -11,7 +11,7 @@ import {
   HoverCard, IconAlarmClockOutline16, IconArchiveOutline20, IconBranchOutline16,
   IconEditOutline16, IconEllipsisOutline16, IconFolderClose16, IconFolderOpen16,
   IconPlusOutline16, IconTrashOutline16, IconTriangleRightFill14, Menu, relativeTime,
-  StateDot,
+  StateDot, Toast,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { StateDotState } from '@deepseek-ai/dsh-client-ui-primitives'
 import { abbreviateHomePath } from '@deepseek-ai/dsh-util-workspace-path'
@@ -371,11 +371,12 @@ export function SearchResultItem({ result, currentId, onOpen, t }: {
  * @param props.onFork - fork a session at its last completed turn.
  * @param props.onArchive - archive a session by id.
  * @param props.drag - optional draggable-row wiring.
+ * @param props.renderSlot - renders the composed session-menu slot rows (absent in pure presentational use).
  * @param props.flat - omit the empty status slot in the hierarchy-free flat list.
  * @param props.t - the browser root's locale seat.
  * @returns the session row.
  */
-export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork, onArchive, drag, flat = false, t }: {
+export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork, onArchive, drag, renderSlot, flat = false, t }: {
   node: SessionNode
   currentId: string | undefined
   now: number
@@ -388,6 +389,8 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
   onArchive: (id: SessionNode['id']) => void
   /** Present only on draggable rows (workspace-group sessions outside search). */
   drag?: RowDragProps | undefined
+  /** Renders the composed session-menu slot rows; absent in pure presentational use. */
+  renderSlot?: WorkspaceBrowserProps['renderSlot'] | undefined
   /** The row is rendered without a parent Workspace header. */
   flat?: boolean | undefined
   t: RowTranslate
@@ -399,6 +402,10 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
   const primaryStatus = statuses[0]
   const showStatus = primaryStatus.state !== 'done' || row.completed
   const [menuOpen, setMenuOpen] = useState(false)
+  // Row-level transient toast for slot-contributed row feedback (e.g. "Copied"
+  // after a Session ID copy). It lives at the row, not inside the menu, so it
+  // survives the menu closing when the row's handler reports through `notify`.
+  const [rowToast, setRowToast] = useState<string | null>(null)
   // Archive hides the row through the registry-global archive set and never
   // touches the session log, so it is not styled as destructive and needs no
   // confirmation dialog.
@@ -408,6 +415,16 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
     // 20-native glyph in the menu's 16px icon slot (Menu.module.css .itemIcon).
     { id: 'archive', label: t('menu.archiveSession'), icon: <IconArchiveOutline20 size={16} /> },
   ]
+  // Slot-contributed rows render after the native items. Each entry owns its
+  // own handler and receives `close` so it can dismiss the menu exactly like
+  // the native rows do via setMenuOpen(false).
+  const sessionMenuChildren = renderSlot === undefined
+    ? null
+    : renderSlot('sidebar.workspaces.sessionMenuItem', {
+      sessionId: node.id,
+      close: () => { setMenuOpen(false) },
+      notify: (text) => { setRowToast(text) },
+    })
   // Figma session cell: pad 8, status slot 16, then a 4px title gap.
   const ownRow = (
     <div
@@ -473,6 +490,7 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
             }}
             portal
             closeOnPointerLeave
+            children={sessionMenuChildren}
             anchor={(
               <button
                 type="button"
@@ -489,13 +507,16 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
     </div>
   )
   return (
-    <HoverCard
-      anchor={ownRow}
-      content={<SessionHoverContent node={node} now={now} t={t} />}
-      disabled={menuOpen || drag?.active === true}
-      copyText={row.blank ? undefined : row.title}
-      copyLabel={t('copy')}
-      copiedLabel={t('hover.copied')}
-    />
+    <>
+      <HoverCard
+        anchor={ownRow}
+        content={<SessionHoverContent node={node} now={now} t={t} />}
+        disabled={menuOpen || drag?.active === true}
+        copyText={row.blank ? undefined : row.title}
+        copyLabel={t('copy')}
+        copiedLabel={t('hover.copied')}
+      />
+      {rowToast !== null && <Toast text={rowToast} onDone={() => { setRowToast(null) }} />}
+    </>
   )
 }

@@ -51,12 +51,39 @@ export interface DirectoryFlowOwnerProps {
   onError: (message: string) => void
 }
 
+/**
+ * Owner share of the session-menu item hole: the identity to act on and the
+ * hook that closes the menu. Each contributed row owns its own handler, so it
+ * receives `close` to dismiss the menu exactly like the native rows do.
+ */
+export interface SessionMenuItemOwnerProps {
+  /** The session the opened menu belongs to. */
+  sessionId: SessionId
+  /** Close the session menu (the row's handler has already run or been scheduled). */
+  close: () => void
+  /**
+   * Show a transient toast for this row's feedback. The menu closes as soon as
+   * a row's handler runs, so the row's own subtree unmounts before any
+   * asynchronous feedback (e.g. a clipboard write) resolves; the row therefore
+   * reports its feedback through this owner callback, whose toast lives at the
+   * menu's row and survives the close.
+   */
+  notify: (text: string) => void
+}
+
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
     /** Directory-flow hole under the conversation empty-state picker (declared by the WorkspacePicker entry). */
     'conversation.hero.workspace.directoryFlow': { kind: 'single'; scope: 'root'; owner: DirectoryFlowOwnerProps }
     /** Directory-flow hole under the sidebar browsing region (declared by the WorkspaceBrowser entry). */
     'sidebar.workspaces.directoryFlow': { kind: 'single'; scope: 'root'; owner: DirectoryFlowOwnerProps }
+    /**
+     * Session-row menu item hole (declared by the WorkspaceBrowser entry):
+     * plugins append their own rows beside the native rename/fork/archive rows.
+     * The shell renders the slot's rows as the Menu's children and owns no
+     * Session-ID-specific copy or behavior.
+     */
+    'sidebar.workspaces.sessionMenuItem': { kind: 'list'; scope: 'root'; owner: SessionMenuItemOwnerProps }
   }
 }
 
@@ -147,7 +174,7 @@ export type WorkspaceBrowserInjected = {
 /** Full browser props: shell owner share + viewing store + injected actions + the locale seat. */
 export type WorkspaceBrowserProps =
   PropsRuntime<'sidebar.workspaces'>
-  & PropsRenderSlots<'sidebar.workspaces.directoryFlow'>
+  & PropsRenderSlots<'sidebar.workspaces.directoryFlow' | 'sidebar.workspaces.sessionMenuItem'>
   & PropsStore<ReturnType<typeof createWorkspaceViewStore>>
   & Omit<WorkspaceBrowserInjected, 'hooks'>
   & PropsHooks<WorkspaceBrowserInjected['hooks']>
