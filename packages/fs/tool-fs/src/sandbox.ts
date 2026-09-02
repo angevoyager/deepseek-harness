@@ -61,8 +61,11 @@ export class FsSandboxController {
       sandbox_permissions: {
         type: 'string',
         enum: [...this.escalationModes],
-        description: 'The wider sandbox mode this file operation needs. Only valid as a one-shot retry '
-          + 'of an operation the sandbox just denied; requires justification and user approval.',
+        description: 'The wider sandbox mode this file operation needs. When you know the operation will be '
+          + 'denied under the current policy (a target outside the session workspace under workspace-write, or '
+          + 'any mutation in a read-only session), pass it up front with a one-sentence justification to '
+          + 'request user approval BEFORE the operation runs — do not attempt a write you already know is '
+          + 'denied. Also valid as the one-shot retry after a denial. Requires justification and user approval.',
       },
       justification: {
         type: 'string',

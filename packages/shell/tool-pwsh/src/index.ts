@@ -130,16 +130,17 @@ function pwshDescription(backgroundEnabled: boolean, escalationModes: readonly S
     + 'do not retry the command another way — escalate the exact command once or restructure it to '
     + 'avoid capturing output. '
     + 'Attempting a command the sandbox may deny is safe and expected: run it and read the '
-    + 'marker rather than assuming the denial. When a command is denied and a wider mode would let it '
-    + 'succeed, escalate immediately in the same turn — the one sanctioned exception to a denial: retry '
-    + 'the exact same command once with `sandbox_permissions` (the narrowest wider mode that suffices) '
-    + 'plus a one-sentence `justification`. Do not detour through chat to ask permission first — the '
-    + 'approval prompt raised by that retry is how the user consents. If the session states approval '
-    + 'prompts are disabled, there is no exception: a denial is final — do not set `sandbox_permissions`. '
-    + 'Never escalate speculatively: ground the request in a real denial — normally the one this command '
-    + 'just hit; escalating up front is fine only when this session already denied the same access. '
-    + 'A rejected escalation is final for that command — stop and explain, never work around '
-    + 'it — but it does not forbid attempting or escalating other commands later.'
+    + 'marker rather than assuming the denial. When you already know the command will be denied — it '
+    + 'writes outside the session workspace, or it spawns child processes the confined sandbox blocks — '
+    + 'request approval up front instead of running it first: pass `sandbox_permissions` (the narrowest '
+    + 'wider mode that suffices) with a one-sentence `justification`; the approval prompt asks the user '
+    + 'BEFORE the command runs. When a command is denied and a wider mode would let it succeed, escalate '
+    + 'immediately in the same turn — the one sanctioned exception to a denial: retry the exact same '
+    + 'command once with `sandbox_permissions` + a one-sentence `justification`. Do not detour through '
+    + 'chat to ask permission first — the approval prompt raised by that retry is how the user consents. '
+    + 'If the session states approval prompts are disabled, there is no exception: a denial is final — do '
+    + 'not set `sandbox_permissions`. A rejected escalation is final for that command — stop and explain, '
+    + 'never work around it — but it does not forbid attempting or escalating other commands later.'
 }
 
 /**
@@ -244,7 +245,10 @@ export function apply(ctx: Context, config: Config = {}): void {
     name: 'tool:pwsh',
     order: ctx.systemPrompt.getSectionOrder('TOOL_PWSH'),
     text: 'Non-zero exits are reported as `[exit code: N]` markers; investigate failures before moving on. '
-      + 'On Windows a killed process settles as `[exit code: 1]` without a signal marker; treat a bare exit 1 after an interruption as a termination, not a command failure.',
+      + 'On Windows a killed process settles as `[exit code: 1]` without a signal marker; treat a bare exit 1 after an interruption as a termination, not a command failure.'
+      + (escalationModes.length > 0
+        ? ' When you know the sandbox will deny a command (it writes outside the session workspace, or it spawns child processes the confined sandbox blocks), pass sandbox_permissions and a one-sentence justification on the first call to request approval before it runs.'
+        : ''),
   })
 
   ctx.tools.register(defineTool({
@@ -269,7 +273,7 @@ export function apply(ctx: Context, config: Config = {}): void {
         sandbox_permissions: {
           type: 'string' as const,
           enum: [...escalationModes],
-          description: 'The wider sandbox mode this command needs. Only valid as a one-shot retry of a command the sandbox just denied; requires justification and user approval.',
+          description: 'The wider sandbox mode this command needs. When you know the command will be denied under the current policy (e.g. it writes outside the session workspace, or it will be blocked by the sandbox boundary), pass it up front with a one-sentence justification to request user approval BEFORE the command runs — do not run a command you already know is denied. Also valid as the one-shot retry after a denial. Requires justification and user approval.',
         },
         justification: {
           type: 'string' as const,

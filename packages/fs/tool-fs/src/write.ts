@@ -62,7 +62,10 @@ export function applyWriteTool(ctx: Context, sandbox: FsSandboxController): void
   ctx.systemPrompt.section({
     name: 'tool:write',
     order: ctx.systemPrompt.getSectionOrder('TOOL_WRITE'),
-    text: 'Use the write tool to create files or completely replace file contents. Existing files are overwritten, so read an existing file first (the default fs-observation-policy requires it) and prefer edit for targeted changes.',
+    text: 'Use the write tool to create files or completely replace file contents. Existing files are overwritten, so read an existing file first (the default fs-observation-policy requires it) and prefer edit for targeted changes.'
+      + (sandbox.escalationModes.length > 0
+        ? ' Do not attempt first a write the current policy will deny (a target outside the session workspace under workspace-write, or a read-only session): pass sandbox_permissions and a one-sentence justification on the first call to request approval before it runs.'
+        : ''),
   })
 
   ctx.tools.register(defineTool({
